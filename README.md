@@ -1,5 +1,3 @@
-# The best 1 R/S Turbo.
-
 # Version: [Python 3.8](https://www.python.org/downloads/release/python-380/)
 # [Preview of turbo](https://streamable.com/nfqpgv) | Contact: [telegram](https://t.me/misinput) for more info
 ## How to use this tool
