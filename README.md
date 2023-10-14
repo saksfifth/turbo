@@ -21,6 +21,6 @@ self.vars, self.webhooks = vars, [{"url":"https://discord.com/api/webhooks/Examp
 ```
   ^ Example
 
-### 4. Run it
+### 3. Run it
    - Run it either clicking on `main.py` or `python3 main.py` 
 
