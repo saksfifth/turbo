@@ -1,5 +1,5 @@
 {
     "gamertagSystem": "old",
     "auth": "accounts",
-    "accounts": "accounts.txt"
+    "accounts": "data/accounts.txt"
 }

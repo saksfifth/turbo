@@ -12,21 +12,31 @@ from textual.widgets import Input
 
 from api import Auth, Turbo
 from util.alignment import center, center_y
+
 warnings.simplefilter("ignore", ResourceWarning)
 configuration = load(open("data/configuration.json"))
 placeholder = ""
 limit = 0
 
 
-
 class InputTextbox(App):
-    CSS_PATH = "input.css"
+    CSS_PATH = "util/input.css"
 
     @staticmethod
     def valid(value) -> bool:
         if placeholder == "Gamertag":
-            return not match("[a-zA-Z0-9 ]", value) or value[0] not in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                                                                        '9']
+            return not match("[a-zA-Z0-9 ]", value) or value[0] not in [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+            ]
         elif placeholder == "Threads":
             try:
                 int(value)
@@ -45,18 +55,18 @@ class InputTextbox(App):
 
     async def on_input_submitted(self):
         if self.valid(self.query_one("#inp", Input).value.strip()):
-            self.exit(self.query_one('#inp', Input).value.strip())
+            self.exit(self.query_one("#inp", Input).value.strip())
         else:
             self.console.print(
-                "Invalid Value!", justify='right', style='white on #000000')
+                "Invalid Value!", justify="right", style="white on #000000"
+            )
 
 
 def configure(key, console):
-    console.print(
-        f"[[bold grey93]*[/bold grey93]] {key}: ", end="", highlight=False)
+    console.print(f"[[bold grey93]*[/bold grey93]] {key}: ", end="", highlight=False)
     btc = input()
     configuration[key] = btc
-    with open("data/configuration.json", 'w') as w:
+    with open("data/configuration.json", "w") as w:
         w.write(dumps(configuration, indent=4))
     return btc
 
@@ -65,20 +75,19 @@ class Runner:
     def __init__(self):
         global limit
         self.turbo = Turbo()
-        self.console, self.valid, self.gamertagSystem, self.auth, self.accounts = self.turbo.console, {
-            "gamertagSystem": ["new", "old"], "auth": ["accounts", "tokens"]}, configure('gamertagSystem',
-                                                                                         self.console) if not configuration.get(
-            'gamertagSystem') else configuration["gamertagSystem"], configure('auth',
-                                                                              self.console) if not configuration.get(
-            'auth') else configuration["auth"], configure('accounts', self.console) if not configuration.get(
-            'accounts') else configuration["accounts"]
+        self.console = self.turbo.console
+        self.valid, self.gamertagSystem, self.auth, self.accounts = (
+            {"gamertagSystem": ["new", "old"], "auth": ["accounts", "tokens"]},
+            configuration.get("gamertagSystem") or configure("gamertagSystem", self.console),
+            configuration.get("auth") or configure("auth", self.console),
+            configuration.get("accounts") or configure("accounts", self.console),
+        )
         limit = 12 if self.gamertagSystem == "new" else 15
         self.console.clear()
 
     def check(self):
         errors = [
-            f"[-] {key} invalid option, valid ones are: " +
-            ", ".join(self.valid[key])
+            f"[-] {key} invalid option, valid ones are: " + ", ".join(self.valid[key])
             for key in self.valid
             if configuration[key] not in self.valid[key]
         ]
@@ -90,28 +99,18 @@ class Runner:
         global placeholder
         errors = self.check()
         if len(errors) != 0:
-            self.console.print(center("\n".join(
-                errors) + "\n[*] Edit data/configuration.json to fix errors\nPress enter to exit..."),
-                highlight=False)
+            self.console.print(
+                center(
+                    "\n".join(errors)
+                    + "\n[*] Edit data/configuration.json to fix errors\nPress enter to exit..."
+                ),
+                highlight=False,
+            )
             input()
             exit(-1)
 
         if self.turbo.tag is None:
-            placeholder = "Gamertag"
-            inputt = InputTextbox()
-            capturedinput100 = inputt.run()
-            if capturedinput100 is None:
-                raise SystemExit
-            self.turbo.tag = capturedinput100
-            del capturedinput100
-            self.turbo.rd, self.turbo.cd = {"classicGamertag": self.turbo.tag,
-                                            "targetGamertagFields": "classicGamertag"} if limit == 15 else {
-                "gamertag": self.turbo.tag, "targetGamertagFields": "gamertag"}, {
-                "gamertag": {"classicGamertag": self.turbo.tag}, "preview": False,
-                "useLegacyEntitlement": False} if limit == 15 else {
-                "gamertag": {"gamertag": self.turbo.tag, "gamertagSuffix": "", "classicGamertag": self.turbo.tag},
-                "preview": False, "useLegacyEntitlement": False}
-        
+            self._extracted_from_start_16()
         self.console.clear()
 
         if self.turbo.threads is None:
@@ -121,35 +120,83 @@ class Runner:
                 raise SystemExit
             self.turbo.threads = int(capturedinput100)
             del capturedinput100
-        
+
         load_accounts = Auth(self.accounts)
-        f = ThreadPoolExecutor().submit(run, load_accounts.combolist() if self.auth == "accounts" else load_accounts.jwt())
+        accounts = ThreadPoolExecutor().submit(
+            run,
+            load_accounts.combolist()
+            if self.auth == "accounts"
+            else load_accounts.jwt(),
+        )
         while load_accounts.count != load_accounts.amount:
             self.console.print(
-                f"[[bold grey85]*[/bold grey85]] Loaded accounts: [[bold grey85]{load_accounts.count}[/bold grey85]/[bold grey85]{load_accounts.amount}[/bold grey85]]{' ' * load_accounts.amount}", end="\r", highlight=None)
+                f"[[bold grey85]*[/bold grey85]] Loaded accounts: [[bold grey85]{load_accounts.count}[/bold grey85]/[bold grey85]{load_accounts.amount}[/bold grey85]]{' ' * load_accounts.amount}",
+                end="\r",
+                highlight=None,
+            )
 
-        self.turbo.accounts, failed = f.result()
+        self.turbo.accounts, failed = accounts.result()
         self.console.clear()
-        if len(self.turbo.accounts) == 0:
+        if not self.turbo.accounts:
             self.console.print(
-                f"{center_y()}[[bold grey85]*[/bold grey85]] Get{' VALID' if failed > 0 else ''} {'accounts' if self.auth == 'accounts' else 'tokens'} then use this.\nPress enter to exit.", highlight=None, justify='center')
+                f"{center_y()}[[bold grey85]*[/bold grey85]] Get{' VALID' if failed > 0 else ''} {'accounts' if self.auth == 'accounts' else 'tokens'} then use this.\nPress enter to exit.",
+                highlight=None,
+                justify="center",
+            )
             input()
             exit(-1)
         self.console.print(
-            f"{center_y()}[[bold grey85]+[/bold grey85]] Loaded {len(self.turbo.accounts)} account(s)\n[[bold grey85]*[/bold grey85]] Failed Loading: {failed} account(s)\nPress enter to start.", highlight=False, justify='center')
+            f"{center_y()}[[bold grey85]+[/bold grey85]] Loaded {len(self.turbo.accounts)} account(s)\n[[bold grey85]*[/bold grey85]] Failed Loading: {failed} account(s)\nTag: {self.turbo.tag}\nPress enter to start.",
+            highlight=False,
+            justify="center",
+        )
         self.console.input()
         self.console.clear()
         self.console.print(
-            f"{center_y()}[bold grey85]{self.turbo.banner}[/bold grey85]\n", justify='center')
+            f"{center_y()}[bold grey85]{self.turbo.banner}[/bold grey85]\n",
+            justify="center",
+        )
         Thread(target=run, daemon=True, args=[self.turbo.info()]).start()
-        [Thread(target=run, daemon=True, args=[self.turbo.reserve()]).start()
-         for _ in range(self.turbo.threads)]
+        [
+            Thread(target=run, daemon=True, args=[self.turbo.reserve()]).start()
+            for _ in range(self.turbo.threads)
+        ]
         while True:
             try:
                 pass
             except (KeyboardInterrupt, EOFError):
                 exit(0)
 
+    # TODO Rename this here and in `start`
+    def _extracted_from_start_16(self):
+        global placeholder
+        placeholder = "Gamertag"
+        inputt = InputTextbox()
+        capturedinput100 = inputt.run()
+        if capturedinput100 is None:
+            raise SystemExit
+        self.turbo.tag = capturedinput100
+        del capturedinput100
+        self.turbo.rd, self.turbo.cd = {
+            "classicGamertag": self.turbo.tag,
+            "targetGamertagFields": "classicGamertag",
+        } if limit == 15 else {
+            "gamertag": self.turbo.tag,
+            "targetGamertagFields": "gamertag",
+        }, {
+            "gamertag": {"classicGamertag": self.turbo.tag},
+            "preview": False,
+            "useLegacyEntitlement": False,
+        } if limit == 15 else {
+            "gamertag": {
+                "gamertag": self.turbo.tag,
+                "gamertagSuffix": "",
+                "classicGamertag": self.turbo.tag,
+            },
+            "preview": False,
+            "useLegacyEntitlement": False,
+        }
 
-if __name__ == '__main__':
-     Runner().start()
+
+if __name__ == "__main__":
+    Runner().start()

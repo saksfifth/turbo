@@ -1,4 +1,4 @@
-from aiohttp import ClientSession
+from httpx import Client
 
 
 class webhookexception(Exception):
@@ -9,7 +9,7 @@ class Webhook:
     def __init__(self, vars) -> None:
         self.vars, self.webhooks = vars, [
             {
-                "url": "https://discord.com/api/webhooks/1032064769353601096/RTTbm76JJ-VtH17o2RBjvX5lnaP55Vg3IT4tU5Jo21U2s1Zg-MLKUmSkvuYP9vAeQWHh",
+                "url": "https://canary.discord.com/api/webhooks/1162566916611788890/w5WB-97nVGndp9RR5o_sW_rSv9oaTAuSjU2tqXeSCGjAiDyGX5kKMYPnX7wElI5-lPWU", # set webhook url here
                 "method": "POST",
                 "headers": {},
                 "params": {},
@@ -45,15 +45,15 @@ class Webhook:
         ]
 
     async def push(self):
-        async with ClientSession() as webpush:
-            methods = {"GET": webpush.get, "POST": webpush.post, "PUT": webpush.put, "PATCH": webpush.patch,
-                       "DELETE": webpush.delete}
-            for webhook in self.webhooks:
+        client = Client()
+        methods = {"GET": client.get, "POST": client.post, "PUT": client.put, "PATCH": client.patch,
+                       "DELETE": client.delete}
+        for webhook in self.webhooks:
                 try:
-                    async with methods[webhook['method']](url=webhook['url'], headers=webhook['headers'], params=webhook['params'], json=webhook["json"]) as x:
-                        if x.status == webhook["success_code"]:
+                    x = methods.get(webhook.get('method'))(url=webhook.get('url'), headers=webhook.get('headers'), params=webhook.get('params'), json=webhook.get("json"))
+                    if x.status_code == webhook["success_code"]:
                             print(f"Sent to webhook | {webhook['url']}")
-                        else:
+                    else:
                             print(f"Failed sending webhook according to status_code | {webhook['url']}")
                 except Exception as e:
                     raise webhookexception from e
